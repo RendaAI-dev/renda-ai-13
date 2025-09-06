@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  app:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+      - /app/node_modules # Garante que node_modules no contêiner não seja sobrescrito pelo volume local
+    ports:
+      - "4173:4173" # Porta interna do contêiner : porta exposta no host (se rodar localmente)
+    environment:
+      # Suas variáveis de ambiente (SUPABASE_URL, SUPABASE_ANON_KEY, etc.)
+      # VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+      # VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+      # VITE_STRIPE_PUBLIC_KEY: ${VITE_STRIPE_PUBLIC_KEY}
+      # VITE_PRO_MONTHLY_PRICE_ID: ${VITE_PRO_MONTHLY_PRICE_ID}
+      # VITE_PRO_YEARLY_PRICE_ID: ${VITE_PRO_YEARLY_PRICE_ID}
+      # VITE_ULTIMATE_MONTHLY_PRICE_ID: ${VITE_ULTIMATE_MONTHLY_PRICE_ID}
+      # VITE_ULTIMATE_YEARLY_PRICE_ID: ${VITE_ULTIMATE_YEARLY_PRICE_ID}
+      NODE_ENV: production
+    command: sh -c "npm install && npm run build && npm run preview -- --host 0.0.0.0"

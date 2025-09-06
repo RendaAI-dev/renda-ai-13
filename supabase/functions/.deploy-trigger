@@ -1,0 +1,24 @@
+# This file triggers deployment of Edge Functions
+# Updated: 2025-01-14
+# Version: 1.2.0 - Auto-configure generate-html as public (no JWT)
+
+Deploy the following functions:
+- create-admin-user
+- get-admin-settings
+- update-admin-settings
+- migrate-settings
+- get-public-settings
+- generate-html
+- get-stripe-prices
+- check-subscription-status
+- verify-admin-access
+- promote-to-admin
+- grant-admin-access
+- recover-purchases
+- customer-portal
+- create-checkout-session
+- stripe-webhook
+- sync-subscriptions
+- update-plan-config
+- update-admin-email
+- update-user-email

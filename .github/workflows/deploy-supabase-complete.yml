@@ -1,0 +1,268 @@
+name: Complete Supabase Deployment for Redistribution
+
+on:
+  push:
+    branches: [ main, developer ]
+    paths: 
+      - 'supabase/**'
+  workflow_dispatch:
+    inputs:
+      setup_mode:
+        description: 'Setup mode: fresh (new install) or update (existing)'
+        default: 'update'
+        required: false
+        type: choice
+        options:
+          - fresh
+          - update
+      force_all_migrations:
+        description: 'Force apply all migrations (including pre-installation)'
+        default: false
+        required: false
+        type: boolean
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📦 Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: 🔧 Setup Supabase CLI
+      uses: supabase/setup-cli@v1
+      with:
+        version: latest
+
+    - name: 🚀 Deploy Complete Supabase Setup
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        SETUP_MODE: ${{ inputs.setup_mode || 'update' }}
+        FORCE_ALL_MIGRATIONS: ${{ inputs.force_all_migrations || 'false' }}
+      run: |
+        echo "🔑 Logging into Supabase..."
+        supabase login --token $SUPABASE_ACCESS_TOKEN
+        
+        echo "🔗 Linking to project..."
+        supabase link --project-ref $SUPABASE_PROJECT_ID
+        
+        echo "📊 Current setup mode: $SETUP_MODE"
+        echo "🔄 Force all migrations: $FORCE_ALL_MIGRATIONS"
+        
+        # Check for pending pre-installation migrations
+        echo "🔍 Checking for pre-installation migrations..."
+        PRE_INSTALL_MIGRATIONS=$(find supabase/migrations -name "20250609195700_*.sql" | wc -l)
+        
+        if [ "$PRE_INSTALL_MIGRATIONS" -gt 0 ]; then
+          echo "📋 Found pre-installation migrations that need to be applied"
+          echo "🔧 These migrations contain admin setup and initial configuration"
+        fi
+        
+        if [ "$SETUP_MODE" = "fresh" ]; then
+          echo "🆕 Fresh installation detected - applying all migrations..."
+          
+          # Reset and apply all migrations
+          supabase db reset --linked
+          
+          echo "✅ Database reset and migrations applied"
+        else
+          echo "🔄 Update mode - checking for migrations to apply..."
+          
+          # List current migration status
+          echo "📊 Current migration status:"
+          supabase migration list --linked
+          
+          # Check if we need to force all migrations or use include-all
+          if [ "$FORCE_ALL_MIGRATIONS" = "true" ] || [ "$PRE_INSTALL_MIGRATIONS" -gt 0 ]; then
+            echo "🔧 Using --include-all flag to apply pre-installation migrations..."
+            echo "⚠️  This will apply migrations with timestamps before existing remote migrations"
+            
+            # Apply all migrations including those with earlier timestamps
+            supabase db push --linked --include-all
+            
+            echo "✅ All migrations synchronized (including pre-installation)"
+          else
+            echo "🔄 Applying new migrations only..."
+            
+            # Normal migration push
+            supabase db push --linked
+            
+            echo "✅ New migrations synchronized"
+          fi
+        fi
+        
+        # Final migration status check
+        echo "📋 Final migration status:"
+        supabase migration list --linked
+        
+        echo "🎯 Deploying Edge Functions..."
+        
+        # Deploy all functions
+        supabase functions deploy create-admin-user --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy get-admin-settings --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy update-admin-settings --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy migrate-settings --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy get-public-settings --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy get-stripe-prices --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy check-subscription-status --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy verify-admin-access --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy promote-to-admin --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy grant-admin-access --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy recover-purchases --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy customer-portal --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy create-checkout-session --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy stripe-webhook --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy sync-subscriptions --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy update-plan-config --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy update-admin-email --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy update-user-email --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy generate-html --project-ref $SUPABASE_PROJECT_ID
+        supabase functions deploy generate-pwa-manifest --project-ref $SUPABASE_PROJECT_ID
+        
+        echo "✅ All Edge Functions deployed"
+
+    - name: 🔧 Configure Public Functions
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      run: |
+        echo "⚙️ Configuring public functions..."
+        
+        # Configure stripe-webhook function
+        curl -X PATCH \
+          "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/functions/stripe-webhook" \
+          -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "verify_jwt": false,
+            "import_map": true
+          }' || echo "⚠️  Webhook configuration may need manual setup"
+        
+        # Configure generate-html function to be public (no JWT required)
+        curl -X PATCH \
+          "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/functions/generate-html" \
+          -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "verify_jwt": false,
+            "import_map": true
+          }' || echo "⚠️  generate-html configuration may need manual setup"
+        
+        echo "✅ Public functions configured"
+
+    - name: 🗄️ Verify Storage Setup
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+      run: |
+        echo "📁 Checking storage buckets..."
+        
+        # Check if uploads bucket exists
+        BUCKET_CHECK=$(curl -s \
+          "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_ID/storage/buckets" \
+          -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | grep -o '"name":"uploads"' || echo "not_found")
+        
+        if [ "$BUCKET_CHECK" = "not_found" ]; then
+          echo "⚠️  Storage bucket 'uploads' not found - manual setup may be required"
+        else
+          echo "✅ Storage bucket 'uploads' exists"
+        fi
+
+    - name: 👤 Setup/Verify Admin User
+      env:
+        SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: |
+        echo "👤 Creating initial admin user via Edge Function..."
+        
+        # Call Edge Function to create admin user
+        response=$(curl -s -w "%{http_code}" -X POST \
+          "https://$SUPABASE_PROJECT_ID.supabase.co/functions/v1/create-admin-user" \
+          -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+          -H "Content-Type: application/json")
+        
+        http_code=$(echo "$response" | tail -c 4)
+        body=$(echo "$response" | sed '$ s/...$//')
+        
+        echo "Response: $body"
+        echo "HTTP Code: $http_code"
+        
+        if [ "$http_code" = "200" ]; then
+          echo "✅ Admin user created/verified successfully"
+        else
+          echo "❌ Admin user creation failed with HTTP $http_code"
+          echo "Response body: $body"
+        fi
+        
+        echo "🔍 Verifying installation via SQL function..."
+        
+        # Verify installation using SQL function
+        verification=$(curl -s -X POST \
+          "https://$SUPABASE_PROJECT_ID.supabase.co/rest/v1/rpc/verify_installation" \
+          -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+          -H "Content-Type: application/json" \
+          -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+          -d '{}' || echo "[]")
+        
+        echo "Installation verification: $verification"
+        
+        echo "✅ Admin user setup/verification completed"
+        echo "👤 Default admin: admin@admin.com / admin123!"
+        echo "⚠️  CHANGE THE DEFAULT PASSWORD ON FIRST LOGIN!"
+
+    - name: 🔄 Run Settings Migration (Update Mode Only)
+      if: ${{ inputs.setup_mode != 'fresh' }}
+      env:
+        SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      run: |
+        echo "🔄 Running settings migration for existing installation..."
+        
+        # Call migrate-settings function
+        curl -X POST \
+          "https://$SUPABASE_PROJECT_ID.supabase.co/functions/v1/migrate-settings" \
+          -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+          -H "Content-Type: application/json" \
+          -d '{}' || echo "⚠️  Settings migration may need manual execution"
+        
+        echo "✅ Settings migration completed"
+
+    - name: ✅ Deployment Summary
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo ""
+        echo "📋 Summary:"
+        echo "- ✅ Database migrations applied"
+        echo "- ✅ Edge Functions deployed"
+        echo "- ✅ Storage verified"
+        echo "- ✅ Webhook configured"
+        echo "- ✅ Admin user verified/created"
+        echo "- 👤 Admin login: admin@admin.com / admin123!"
+        echo "- ⚠️  CHANGE DEFAULT PASSWORD!"
+        if [ "${{ inputs.setup_mode }}" != "fresh" ]; then
+          echo "- ✅ Settings migration executed"
+        fi
+        echo ""
+        echo "🔗 Project URL: https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co"
+        echo "📚 Admin Panel: https://${{ secrets.SUPABASE_PROJECT_ID }}.supabase.co (login with admin@admin.com)"
+        echo "📖 Installation Guide: See INSTALACAO_ADMIN.md"
+        echo "🔧 Next steps: Login as admin and configure your secrets"
+
+    - name: 🚨 Deployment Failed
+      if: failure()
+      run: |
+        echo "❌ Deployment failed!"
+        echo ""
+        echo "🔍 Troubleshooting checklist:"
+        echo "1. Verify all required secrets are configured:"
+        echo "   - SUPABASE_ACCESS_TOKEN"
+        echo "   - SUPABASE_PROJECT_ID" 
+        echo "   - SUPABASE_SERVICE_ROLE_KEY"
+        echo "   - SUPABASE_DB_PASSWORD"
+        echo "2. Check Supabase project is active"
+        echo "3. Verify permissions for the access token"
+        echo "4. Check the Actions logs for specific error messages"

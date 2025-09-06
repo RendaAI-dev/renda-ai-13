@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Poupe Já</title>
+    <meta name="description" content="Gerencie suas finanças com o Poupe Já" />
+    <meta name="author" content="Lovable" />
+
+    <!-- Favicon -->
+    <link rel="icon" href="https://mjplohxdthhtmpylbuta.supabase.co/storage/v1/object/public/uploads/logos/1752668378390-uv6uvdu084b.png" type="image/png" />
+
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4ECDC4" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Poupe Já" />
+    <link rel="apple-touch-icon" href="https://mjplohxdthhtmpylbuta.supabase.co/storage/v1/object/public/uploads/logos/1752668378390-uv6uvdu084b.png" />
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Open Graph / WhatsApp Meta Tags -->
+    <meta property="og:title" content="Poupe Já" />
+    <meta property="og:description" content="Gerencie suas finanças com o Poupe Já." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://mjplohxdthhtmpylbuta.supabase.co/storage/v1/object/public/uploads/logos/1752668378390-uv6uvdu084b.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Poupe Já" />
+    <meta name="twitter:description" content="Gerencie suas finanças com o Poupe Já" />
+    <meta name="twitter:image" content="https://mjplohxdthhtmpylbuta.supabase.co/storage/v1/object/public/uploads/logos/1752668378390-uv6uvdu084b.png" />
+
+    <!-- Vite -->
+    <link rel="modulepreload" href="/src/main.tsx" />
+
+    <script>
+      // Pre-carregar branding cache se existir
+      (function() {
+        const cached = localStorage.getItem('app_branding_cache');
+        if (cached) {
+          try {
+            const branding = JSON.parse(cached);
+            const isExpired = Date.now() - branding.timestamp > 300000; // 5 min
+            
+            if (!isExpired && branding.logoUrl) {
+              // Pre-carregar imagem
+              const link = document.createElement('link');
+              link.rel = 'preload';
+              link.as = 'image';
+              link.href = branding.logoUrl;
+              document.head.appendChild(link);
+              
+              // Atualizar título
+              if (branding.companyName) {
+                document.title = branding.companyName + ' - Controle Financeiro';
+              }
+              
+              // Atualizar favicon
+              if (branding.faviconUrl && branding.faviconUrl !== '/favicon.ico') {
+                const favicon = document.querySelector("link[rel*='icon']");
+                if (favicon) {
+                  favicon.href = branding.faviconUrl;
+                }
+              }
+            }
+          } catch (e) {
+            // Ignore
+          }
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
