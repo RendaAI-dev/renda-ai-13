@@ -35,6 +35,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       cidade: data.cidade || "",
       estado: data.estado || "",
       currentPlanType: data.current_plan_type || "free",
+      planValue: data.plan_value,
       achievements: [] // Return empty array since achievements tables don't exist yet
     };
   } catch (error) {
@@ -116,6 +117,7 @@ export const updateUserProfile = async (
       cidade: data.cidade || "",
       estado: data.estado || "",
       currentPlanType: data.current_plan_type || "free",
+      planValue: data.plan_value,
       achievements: [] // Return empty array since achievements tables don't exist yet
     };
   } catch (error) {

@@ -36,5 +36,16 @@ export async function handleInvoicePaymentSucceeded(
     throw error;
   }
 
+  // Update plan_value in poupeja_users table
+  try {
+    const planValue = subscription.plan?.amount ? subscription.plan.amount / 100 : null;
+    await supabase.from("poupeja_users").update({
+      plan_value: planValue
+    }).eq("id", (await supabase.from("poupeja_subscriptions").select("user_id").eq("stripe_subscription_id", subscriptionId).single()).data?.user_id);
+    console.log(`Plan value updated: ${planValue}`);
+  } catch (planValueError) {
+    console.error("Error updating plan value:", planValueError);
+  }
+
   console.log(`Subscription ${subscriptionId} successfully updated after payment confirmation`);
 }

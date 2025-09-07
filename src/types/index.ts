@@ -83,6 +83,7 @@ export interface User {
   cidade?: string;
   estado?: string;
   currentPlanType?: string;
+  planValue?: number; // Valor específico que o usuário paga pelo plano atual
   achievements: Achievement[];
 }
 

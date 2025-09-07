@@ -73,12 +73,18 @@ export async function handleSubscriptionUpdated(
     if (subscription.items && subscription.items.data && subscription.items.data.length > 0) {
       const priceId = subscription.items.data[0].price.id;
       const interval = subscription.items.data[0].price.recurring?.interval;
+      const unitAmount = subscription.items.data[0].price.unit_amount; // Valor em centavos
       
       console.log(`[SUBSCRIPTION-UPDATED] Price details:`, {
         priceId,
         interval,
+        unitAmount,
         recurring: subscription.items.data[0].price.recurring
       });
+      
+      // Calcular plan_value em reais
+      const planValue = unitAmount ? unitAmount / 100 : null;
+      subscriptionData.plan_value = planValue;
       
       // Try to get plan_type from settings first
       let planType;

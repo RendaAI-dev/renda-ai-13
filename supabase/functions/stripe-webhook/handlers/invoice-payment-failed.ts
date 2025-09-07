@@ -36,5 +36,15 @@ export async function handleInvoicePaymentFailed(
     throw error;
   }
 
+  // Update plan_value in poupeja_users table (set to null if payment failed)
+  try {
+    await supabase.from("poupeja_users").update({
+      plan_value: null
+    }).eq("id", (await supabase.from("poupeja_subscriptions").select("user_id").eq("stripe_subscription_id", subscriptionId).single()).data?.user_id);
+    console.log("Plan value cleared due to payment failure");
+  } catch (planValueError) {
+    console.error("Error clearing plan value:", planValueError);
+  }
+
   console.log(`Subscription ${subscriptionId} updated with failed payment status: ${subscription.status}`);
 }

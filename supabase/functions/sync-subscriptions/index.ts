@@ -194,6 +194,15 @@ serve(async (req) => {
             }
           }
 
+          // Calcular plan_value baseado no price do Stripe
+          let planValue = null;
+          if (subscription.items.data.length > 0) {
+            const amount = subscription.items.data[0].price.unit_amount;
+            if (amount) {
+              planValue = amount / 100; // Converter de centavos para reais
+            }
+          }
+
           // Inserir/atualizar assinatura
           const subscriptionData = {
             user_id: userId,
@@ -239,6 +248,15 @@ serve(async (req) => {
               subscriptionId: subscription.id
             });
             continue;
+          }
+
+          // Atualizar plan_value na tabela poupeja_users
+          if (planValue) {
+            await supabase
+              .from('poupeja_users')
+              .update({ plan_value: planValue })
+              .eq('id', userId);
+            logStep("Updated plan value in poupeja_users", { userId, planValue });
           }
 
           syncedCount++;

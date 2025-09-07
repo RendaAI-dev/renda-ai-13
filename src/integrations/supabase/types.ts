@@ -446,6 +446,7 @@ export type Database = {
           name: string | null
           numero: string | null
           phone: string | null
+          plan_value: number | null
           profile_image: string | null
           updated_at: string | null
         }
@@ -465,6 +466,7 @@ export type Database = {
           name?: string | null
           numero?: string | null
           phone?: string | null
+          plan_value?: number | null
           profile_image?: string | null
           updated_at?: string | null
         }
@@ -484,6 +486,7 @@ export type Database = {
           name?: string | null
           numero?: string | null
           phone?: string | null
+          plan_value?: number | null
           profile_image?: string | null
           updated_at?: string | null
         }

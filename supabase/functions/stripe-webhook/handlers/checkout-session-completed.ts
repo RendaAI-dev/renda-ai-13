@@ -34,6 +34,8 @@ export async function handleCheckoutSessionCompleted(
   
   // Map the new price IDs to plan types using the edge function config
   const priceId = subscription.items.data[0].price.id;
+  const unitAmount = subscription.items.data[0].price.unit_amount; // Valor em centavos
+  const planValue = unitAmount ? unitAmount / 100 : null; // Converter para reais
   let planType;
   
   try {
@@ -80,6 +82,14 @@ export async function handleCheckoutSessionCompleted(
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
     cancel_at_period_end: subscription.cancel_at_period_end
   });
+
+  // Update plan_value in poupeja_users table
+  if (planValue) {
+    await supabase.from("poupeja_users").update({
+      plan_value: planValue
+    }).eq("id", userId);
+    console.log(`Plan value updated in poupeja_users: ${planValue} for user ${userId}`);
+  }
 
   console.log(`Subscription created/updated with plan ${planType} and status ${subscriptionStatus}`);
 }
