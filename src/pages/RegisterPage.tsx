@@ -20,7 +20,17 @@ const RegisterPage = () => {
   const [whatsapp, setWhatsapp] = useState('');
   const [cpf, setCpf] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [address, setAddress] = useState('');
+  
+  // Estados para endereço separado
+  const [cep, setCep] = useState('');
+  const [logradouro, setLogradouro] = useState('');
+  const [numero, setNumero] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
+  
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -116,7 +126,72 @@ const RegisterPage = () => {
     setWhatsapp(formattedValue);
   };
 
-  // Função para formatar CPF como XXX.XXX.XXX-XX
+  // Função para formatar CEP como XXXXX-XXX
+  const formatCep = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    
+    if (numbers.length <= 5) {
+      return numbers;
+    } else {
+      return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+    }
+  };
+
+  // Função para buscar endereço por CEP
+  const fetchAddressByCep = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    
+    if (cleanCep.length !== 8) {
+      return;
+    }
+
+    setIsLoadingCep(true);
+    
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      
+      if (data.erro) {
+        throw new Error('CEP não encontrado');
+      }
+      
+      // Preencher campos automaticamente
+      setLogradouro(data.logradouro || '');
+      setBairro(data.bairro || '');
+      setCidade(data.localidade || '');
+      setEstado(data.uf || '');
+      
+      // Focar no campo número após busca bem-sucedida
+      setTimeout(() => {
+        const numeroField = document.getElementById('numero');
+        if (numeroField) {
+          numeroField.focus();
+        }
+      }, 100);
+      
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      // Limpar campos em caso de erro
+      setLogradouro('');
+      setBairro('');
+      setCidade('');
+      setEstado('');
+    } finally {
+      setIsLoadingCep(false);
+    }
+  };
+
+  // Função para lidar com a mudança no campo de CEP
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatCep(e.target.value);
+    setCep(formattedValue);
+    
+    // Buscar endereço quando CEP estiver completo
+    const cleanCep = formattedValue.replace(/\D/g, '');
+    if (cleanCep.length === 8) {
+      fetchAddressByCep(formattedValue);
+    }
+  };
   const formatCpf = (value: string) => {
     const numbers = value.replace(/\D/g, '');
     
@@ -189,6 +264,9 @@ const RegisterPage = () => {
       const formattedPhone = whatsapp.replace(/\D/g, '');
       const formattedCpf = cpf.replace(/\D/g, '');
       
+      // Concatenar endereço completo
+      const fullAddress = `${logradouro}, ${numero}${complemento ? `, ${complemento}` : ''}, ${bairro}, ${cidade}, ${estado}`;
+      
       // Validar CPF antes de prosseguir
       if (!validateCpf(cpf)) {
         throw new Error('CPF inválido. Por favor, verifique o número digitado.');
@@ -205,7 +283,7 @@ const RegisterPage = () => {
             phone: formattedPhone,
             cpf: formattedCpf,
             birth_date: birthDate,
-            address: address,
+            address: fullAddress,
           },
         },
       });
@@ -485,22 +563,127 @@ const RegisterPage = () => {
             />
           </div>
 
-          <div>
-            <Label htmlFor="address">Endereço Completo</Label>
-            <Input
-              id="address"
-              name="address"
-              type="text"
-              autoComplete="street-address"
-              required
-              placeholder="Rua, número, bairro, cidade, estado"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="mt-1"
-            />
-            <p className="mt-2 text-xs text-gray-500">
-              Endereço completo com rua, número, bairro, cidade e estado.
-            </p>
+          {/* Seção de Endereço */}
+          <div className="space-y-4 p-4 bg-muted/20 rounded-lg">
+            <h3 className="text-sm font-semibold text-muted-foreground">Endereço</h3>
+            
+            <div>
+              <Label htmlFor="cep">CEP</Label>
+              <div className="relative">
+                <Input
+                  id="cep"
+                  name="cep"
+                  type="text"
+                  autoComplete="postal-code"
+                  required
+                  placeholder="XXXXX-XXX"
+                  value={cep}
+                  onChange={handleCepChange}
+                  className="mt-1"
+                  maxLength={9}
+                />
+                {isLoadingCep && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+                  </div>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Digite o CEP para buscar o endereço automaticamente.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <Label htmlFor="logradouro">Logradouro</Label>
+                <Input
+                  id="logradouro"
+                  name="logradouro"
+                  type="text"
+                  autoComplete="address-line1"
+                  required
+                  placeholder="Rua, Avenida, etc."
+                  value={logradouro}
+                  onChange={(e) => setLogradouro(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="numero">Número</Label>
+                <Input
+                  id="numero"
+                  name="numero"
+                  type="text"
+                  autoComplete="address-line2"
+                  required
+                  placeholder="123"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="complemento">Complemento</Label>
+                <Input
+                  id="complemento"
+                  name="complemento"
+                  type="text"
+                  autoComplete="address-line3"
+                  placeholder="Apto, Bloco (opcional)"
+                  value={complemento}
+                  onChange={(e) => setComplemento(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="bairro">Bairro</Label>
+                <Input
+                  id="bairro"
+                  name="bairro"
+                  type="text"
+                  autoComplete="address-level2"
+                  required
+                  placeholder="Bairro"
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input
+                  id="cidade"
+                  name="cidade"
+                  type="text"
+                  autoComplete="address-level2"
+                  required
+                  placeholder="Cidade"
+                  value={cidade}
+                  onChange={(e) => setCidade(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="estado">Estado</Label>
+              <Input
+                id="estado"
+                name="estado"
+                type="text"
+                autoComplete="address-level1"
+                required
+                placeholder="Estado"
+                value={estado}
+                onChange={(e) => setEstado(e.target.value)}
+                className="mt-1"
+                maxLength={2}
+              />
+            </div>
           </div>
 
           <div>
