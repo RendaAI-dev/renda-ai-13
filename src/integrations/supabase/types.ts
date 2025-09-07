@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
   public: {
     Tables: {
       poupeja_categories: {
@@ -124,6 +129,7 @@ export type Database = {
           scheduled_date: string
           status: string | null
           type: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -141,6 +147,7 @@ export type Database = {
           scheduled_date: string
           status?: string | null
           type: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -158,6 +165,7 @@ export type Database = {
           scheduled_date?: string
           status?: string | null
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -173,6 +181,92 @@ export type Database = {
             columns: ["goal_id"]
             isOneToOne: false
             referencedRelation: "poupeja_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poupeja_settings: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          encrypted: boolean | null
+          id: string
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: string | null
+          value_type: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          encrypted?: boolean | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: string | null
+          value_type?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          encrypted?: boolean | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: string | null
+          value_type?: string | null
+        }
+        Relationships: []
+      }
+      poupeja_settings_history: {
+        Row: {
+          action: string
+          category: string
+          changed_at: string | null
+          changed_by: string | null
+          id: string
+          key: string
+          new_value: string | null
+          old_value: string | null
+          setting_id: string | null
+        }
+        Insert: {
+          action: string
+          category: string
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          key: string
+          new_value?: string | null
+          old_value?: string | null
+          setting_id?: string | null
+        }
+        Update: {
+          action?: string
+          category?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          id?: string
+          key?: string
+          new_value?: string | null
+          old_value?: string | null
+          setting_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poupeja_settings_history_setting_id_fkey"
+            columns: ["setting_id"]
+            isOneToOne: false
+            referencedRelation: "poupeja_settings"
             referencedColumns: ["id"]
           },
         ]
@@ -229,6 +323,7 @@ export type Database = {
           goal_id: string | null
           id: string
           type: string
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -240,6 +335,7 @@ export type Database = {
           goal_id?: string | null
           id?: string
           type: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -251,6 +347,7 @@ export type Database = {
           goal_id?: string | null
           id?: string
           type?: string
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -266,6 +363,47 @@ export type Database = {
             columns: ["goal_id"]
             isOneToOne: false
             referencedRelation: "poupeja_goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      poupeja_uploads: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          id: string
+          mime_type: string | null
+          purpose: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          purpose?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          mime_type?: string | null
+          purpose?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "poupeja_uploads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "poupeja_users"
             referencedColumns: ["id"]
           },
         ]
@@ -326,16 +464,101 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      buscar_cadastro_por_email: {
+        Args: { p_email: string }
+        Returns: {
+          current_period_end: string
+          email: string
+          plan_type: string
+          subscription_status: string
+          user_id: string
+        }[]
+      }
+      check_user_role: {
+        Args: {
+          target_role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Returns: boolean
+      }
+      confirm_user_email: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
+      create_default_categories_for_user: {
+        Args: { user_id: string }
+        Returns: undefined
+      }
+      create_initial_admin_user: {
+        Args: { admin_email?: string }
+        Returns: undefined
+      }
       create_update_goal_amount_function: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      decrypt_setting_value: {
+        Args: { p_encrypted_value: string }
+        Returns: string
+      }
+      encrypt_setting_value: {
+        Args: { p_value: string }
+        Returns: string
+      }
+      generate_upload_path: {
+        Args: { file_extension: string; user_id: string }
+        Returns: string
+      }
+      get_file_public_url: {
+        Args: { file_path: string }
+        Returns: string
+      }
+      get_setting: {
+        Args: { p_category: string; p_key: string }
+        Returns: string
+      }
+      get_settings_by_category: {
+        Args: { p_category: string }
+        Returns: {
+          description: string
+          encrypted: boolean
+          key: string
+          value: string
+          value_type: string
+        }[]
+      }
+      get_user_subscription_status: {
+        Args: { p_user_id?: string }
+        Returns: {
+          current_period_end: string
+          is_active: boolean
+          plan_type: string
+          status: string
+          subscription_id: string
+        }[]
+      }
+      grant_admin_access_to_user: {
+        Args: { target_email: string }
+        Returns: boolean
+      }
+      grant_admin_role: {
+        Args: { target_email: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
+      }
+      is_admin: {
+        Args: { user_id?: string }
+        Returns: boolean
+      }
+      migrate_existing_auth_users: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       recover_missing_users: {
         Args: Record<PropertyKey, never>
@@ -343,9 +566,64 @@ export type Database = {
           recovered_count: number
         }[]
       }
+      register_upload: {
+        Args: {
+          p_file_name: string
+          p_file_path: string
+          p_file_size?: number
+          p_mime_type?: string
+          p_purpose?: string
+        }
+        Returns: string
+      }
+      test_trigger_system: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          details: string
+          status: string
+          test_name: string
+        }[]
+      }
+      test_user_creation_system: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       update_goal_amount: {
-        Args: { p_goal_id: string; p_amount_change: number }
+        Args: { p_amount_change: number; p_goal_id: string }
         Returns: number
+      }
+      update_subscription_status: {
+        Args: {
+          p_cancel_at_period_end?: boolean
+          p_current_period_end?: string
+          p_current_period_start?: string
+          p_status: string
+          p_stripe_subscription_id: string
+        }
+        Returns: string
+      }
+      upsert_setting: {
+        Args: {
+          p_category: string
+          p_description?: string
+          p_encrypted?: boolean
+          p_key: string
+          p_value: string
+          p_value_type?: string
+        }
+        Returns: string
+      }
+      validate_file_type: {
+        Args: { allowed_extensions?: string[]; file_name: string }
+        Returns: boolean
+      }
+      verify_installation: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          component: string
+          details: string
+          status: string
+        }[]
       }
     }
     Enums: {
@@ -357,21 +635,25 @@ export type Database = {
   }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -389,14 +671,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -412,14 +696,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -435,14 +721,16 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
@@ -450,14 +738,16 @@ export type Enums<
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
