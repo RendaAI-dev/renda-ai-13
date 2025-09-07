@@ -559,6 +559,13 @@ export type Database = {
         Args: { p_value: string }
         Returns: string
       }
+      fix_missing_user_data: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          details: string
+          fixed_count: number
+        }[]
+      }
       generate_upload_path: {
         Args: { file_extension: string; user_id: string }
         Returns: string
