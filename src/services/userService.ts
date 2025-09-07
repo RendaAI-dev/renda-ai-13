@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@/types";
+import { validateCPF, formatCPF } from "@/utils/cpfUtils";
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
