@@ -4,66 +4,92 @@ import { validateCPF, formatCPF } from "@/utils/cpfUtils";
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    console.log('🔍 [userService] Buscando usuário autenticado...');
-    const { data: { user } } = await supabase.auth.getUser();
+    console.log('🔍 [getCurrentUser] Iniciando busca do usuário atual');
     
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error('❌ [getCurrentUser] Erro no auth.getUser:', authError);
+      throw authError;
+    }
+
     if (!user) {
-      console.log('❌ [userService] Nenhum usuário autenticado encontrado');
+      console.log('ℹ️ [getCurrentUser] Nenhum usuário autenticado');
       return null;
     }
-    
-    console.log('✅ [userService] Usuário autenticado encontrado:', user.id);
-    
-    const { data, error } = await supabase
-      .from("poupeja_users")
-      .select("*")
-      .eq("id", user.id)
+
+    console.log('✅ [getCurrentUser] Usuário autenticado encontrado:', user.id);
+
+    // Fetch user profile from poupeja_users
+    const { data: profile, error: profileError } = await supabase
+      .from('poupeja_users')
+      .select('*')
+      .eq('id', user.id)
       .single();
-    
-    if (error) {
-      console.error("❌ [userService] Erro ao buscar perfil do usuário na poupeja_users:", error);
-      console.log("🔍 [userService] Tentando verificar se usuário existe na tabela...");
+
+    if (profileError) {
+      console.error('❌ [getCurrentUser] Erro ao buscar perfil:', profileError);
       
-      // Verificar se o usuário existe na tabela
-      const { data: checkData, error: checkError } = await supabase
-        .from("poupeja_users")
-        .select("id, email, name")
-        .eq("id", user.id);
+      // Verificação de fallback - se o usuário não existe na poupeja_users
+      if (profileError.code === 'PGRST116') {
+        console.log('⚠️ [getCurrentUser] Usuário não encontrado em poupeja_users, tentando sincronizar...');
         
-      if (checkError) {
-        console.error("❌ [userService] Erro na verificação:", checkError);
-      } else {
-        console.log("📊 [userService] Resultado da verificação:", checkData);
+        // Tentar sincronizar usuário manualmente
+        const { error: syncError } = await supabase.rpc('sync_missing_auth_users');
+        if (syncError) {
+          console.error('❌ [getCurrentUser] Erro na sincronização:', syncError);
+        } else {
+          console.log('✅ [getCurrentUser] Sincronização executada, tentando buscar novamente...');
+          
+          // Tentar buscar novamente após sincronização
+          const { data: retryProfile, error: retryError } = await supabase
+            .from('poupeja_users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+            
+          if (retryProfile && !retryError) {
+            console.log('✅ [getCurrentUser] Usuário encontrado após sincronização');
+            return mapToUser(retryProfile, user);
+          }
+        }
+        
+        return null;
       }
       
-      return null;
+      throw profileError;
     }
+
+    console.log('✅ [getCurrentUser] Perfil encontrado:', profile.email);
+    return mapToUser(profile, user);
     
-    console.log('✅ [userService] Dados do usuário encontrados em poupeja_users:', data);
-    
-    return {
-      id: data.id,
-      name: data.name || user.email?.split('@')[0] || "Usuário",
-      email: data.email || user.email || "",
-      profileImage: data.profile_image,
-      phone: data.phone || "",
-      cpf: data.cpf || "",
-      birthDate: data.birth_date || "",
-      cep: data.cep || "",
-      logradouro: data.logradouro || "",
-      numero: data.numero || "",
-      complemento: data.complemento || "",
-      bairro: data.bairro || "",
-      cidade: data.cidade || "",
-      estado: data.estado || "",
-      currentPlanType: data.current_plan_type || "free",
-      planValue: data.plan_value,
-      achievements: [] // Return empty array since achievements tables don't exist yet
-    };
   } catch (error) {
-    console.error("Error getting current user:", error);
-    return null;
+    console.error('❌ [getCurrentUser] Erro geral:', error);
+    throw error;
   }
+};
+
+// Helper function to map database user to User type
+const mapToUser = (data: any, authUser?: any): User => {
+  return {
+    id: data.id,
+    name: data.name || authUser?.email?.split('@')[0] || "Usuário",
+    email: data.email || authUser?.email || "",
+    profileImage: data.profile_image,
+    phone: data.phone || "",
+    cpf: data.cpf || "",
+    birthDate: data.birth_date || "",
+    cep: data.cep || "",
+    logradouro: data.logradouro || "",
+    numero: data.numero || "",
+    complemento: data.complemento || "",
+    bairro: data.bairro || "",
+    cidade: data.cidade || "",
+    estado: data.estado || "",
+    currentPlanType: data.current_plan_type || "free",
+    planValue: data.plan_value,
+    achievements: [] // Return empty array since achievements tables don't exist yet
+  };
 };
 
 export const updateUserProfile = async (

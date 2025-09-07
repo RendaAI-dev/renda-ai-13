@@ -233,8 +233,9 @@ const RegisterPage = () => {
         throw new Error('Usuário não retornado após o cadastro.');
       }
 
-      console.log('✅ Usuário criado com sucesso - ID:', signUpData.user.id);
-      console.log('📋 Dados enviados para auth.users:', {
+      console.log('✅ [REGISTRO] Usuário criado com sucesso - ID:', signUpData.user.id);
+      
+      const userMetadata = {
         full_name: fullName,
         phone: formattedPhone,
         cpf: formattedCpf,
@@ -246,28 +247,57 @@ const RegisterPage = () => {
         bairro: bairro,
         cidade: cidade,
         estado: estado,
+      };
+      
+      console.log('📧 [REGISTRO] Dados enviados ao auth.users:', {
+        email,
+        password: '[REDACTED]',
+        options: {
+          data: userMetadata
+        }
       });
-      
-      // Aguardar um pouco para o trigger processar
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Verificar se os dados foram salvos na tabela poupeja_users
-      console.log('🔍 Verificando se usuário foi criado em poupeja_users...');
-      const { data: userData, error: userError } = await supabase
+
+      // Aguardar o trigger processar (3 segundos para dar mais tempo)
+      console.log('⏳ [REGISTRO] Aguardando trigger processar...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // Verificar se o usuário foi inserido na poupeja_users
+      let { data: poupejaUser, error: poupejaError } = await supabase
         .from('poupeja_users')
         .select('*')
         .eq('id', signUpData.user.id)
         .single();
+
+      console.log('🔍 [REGISTRO] Verificação poupeja_users:', { poupejaUser, poupejaError });
+      
+      // Se não encontrou o usuário, tentar sincronizar manualmente
+      if (poupejaError?.code === 'PGRST116') {
+        console.log('🔄 [REGISTRO] Usuário não encontrado, tentando sincronização manual...');
         
-      if (userError) {
-        console.error('❌ Erro ao buscar usuário em poupeja_users:', userError);
-      } else {
-        console.log('✅ Usuário encontrado em poupeja_users:', userData);
+        const { data: syncResult, error: syncError } = await supabase.rpc('sync_missing_auth_users');
+        if (syncError) {
+          console.error('❌ [REGISTRO] Erro na sincronização:', syncError);
+        } else {
+          console.log('✅ [REGISTRO] Sincronização executada:', syncResult);
+          
+          // Tentar buscar novamente após sincronização
+          const { data: retryUser, error: retryError } = await supabase
+            .from('poupeja_users')
+            .select('*')
+            .eq('id', signUpData.user.id)
+            .single();
+            
+          if (retryUser && !retryError) {
+            console.log('✅ [REGISTRO] Usuário encontrado após sincronização manual');
+            poupejaUser = retryUser;
+            poupejaError = null;
+          }
+        }
       }
       
-      // Executar debug completo
+      // Debug adicional
       const debugResult = await debugUserRegistration(signUpData.user.id);
-      console.log('🔍 Resultado do debug completo:', debugResult);
+      console.log('🐛 [REGISTRO] Debug completo:', debugResult);
       
       // Salvar informações do plano no localStorage para usar após o login
       savePendingCheckout(priceId, email);

@@ -634,6 +634,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      sync_missing_auth_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          synced_count: number
+          synced_users: string[]
+        }[]
+      }
       test_trigger_system: {
         Args: Record<PropertyKey, never>
         Returns: {
