@@ -75,7 +75,13 @@ export interface User {
   phone?: string;
   cpf?: string;
   birthDate?: string; // ISO date string
-  address?: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
   currentPlanType?: string;
   achievements: Achievement[];
 }

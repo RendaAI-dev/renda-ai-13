@@ -27,7 +27,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
       phone: data.phone || "",
       cpf: data.cpf || "",
       birthDate: data.birth_date || "",
-      address: data.address || "",
+      cep: data.cep || "",
+      logradouro: data.logradouro || "",
+      numero: data.numero || "",
+      complemento: data.complemento || "",
+      bairro: data.bairro || "",
+      cidade: data.cidade || "",
+      estado: data.estado || "",
       currentPlanType: data.current_plan_type || "free",
       achievements: [] // Return empty array since achievements tables don't exist yet
     };
@@ -38,7 +44,20 @@ export const getCurrentUser = async (): Promise<User | null> => {
 };
 
 export const updateUserProfile = async (
-  userData: Partial<{ name: string; profileImage: string; phone: string; cpf: string; birthDate: string; address: string; }>
+  userData: Partial<{ 
+    name: string; 
+    profileImage: string; 
+    phone: string; 
+    cpf: string; 
+    birthDate: string; 
+    cep: string;
+    logradouro: string;
+    numero: string;
+    complemento: string;
+    bairro: string;
+    cidade: string;
+    estado: string;
+  }>
 ): Promise<User | null> => {
   try {
     console.log('userService: Updating user profile with data:', userData);
@@ -56,7 +75,13 @@ export const updateUserProfile = async (
     if (userData.phone !== undefined) updateData.phone = userData.phone;
     if (userData.cpf !== undefined) updateData.cpf = userData.cpf;
     if (userData.birthDate !== undefined) updateData.birth_date = userData.birthDate;
-    if (userData.address !== undefined) updateData.address = userData.address;
+    if (userData.cep !== undefined) updateData.cep = userData.cep;
+    if (userData.logradouro !== undefined) updateData.logradouro = userData.logradouro;
+    if (userData.numero !== undefined) updateData.numero = userData.numero;
+    if (userData.complemento !== undefined) updateData.complemento = userData.complemento;
+    if (userData.bairro !== undefined) updateData.bairro = userData.bairro;
+    if (userData.cidade !== undefined) updateData.cidade = userData.cidade;
+    if (userData.estado !== undefined) updateData.estado = userData.estado;
     
     console.log('userService: Updating database with mapped data:', updateData);
     
@@ -83,7 +108,13 @@ export const updateUserProfile = async (
       phone: data.phone || "",
       cpf: data.cpf || "",
       birthDate: data.birth_date || "",
-      address: data.address || "",
+      cep: data.cep || "",
+      logradouro: data.logradouro || "",
+      numero: data.numero || "",
+      complemento: data.complemento || "",
+      bairro: data.bairro || "",
+      cidade: data.cidade || "",
+      estado: data.estado || "",
       currentPlanType: data.current_plan_type || "free",
       achievements: [] // Return empty array since achievements tables don't exist yet
     };

@@ -431,7 +431,6 @@ export type Database = {
       }
       poupeja_users: {
         Row: {
-          address: string | null
           bairro: string | null
           birth_date: string | null
           cep: string | null
@@ -451,7 +450,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          address?: string | null
           bairro?: string | null
           birth_date?: string | null
           cep?: string | null
@@ -471,7 +469,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          address?: string | null
           bairro?: string | null
           birth_date?: string | null
           cep?: string | null

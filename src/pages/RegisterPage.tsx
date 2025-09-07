@@ -263,9 +263,7 @@ const RegisterPage = () => {
       // Normaliza o número de telefone antes de enviar (remove caracteres não numéricos)
       const formattedPhone = whatsapp.replace(/\D/g, '');
       const formattedCpf = cpf.replace(/\D/g, '');
-      
-      // Concatenar endereço completo
-      const fullAddress = `${logradouro}, ${numero}${complemento ? `, ${complemento}` : ''}, ${bairro}, ${cidade}, ${estado}`;
+      const formattedCep = cep.replace(/\D/g, '');
       
       // Validar CPF antes de prosseguir
       if (!validateCpf(cpf)) {
@@ -283,7 +281,13 @@ const RegisterPage = () => {
             phone: formattedPhone,
             cpf: formattedCpf,
             birth_date: birthDate,
-            address: fullAddress,
+            cep: formattedCep,
+            logradouro: logradouro,
+            numero: numero,
+            complemento: complemento,
+            bairro: bairro,
+            cidade: cidade,
+            estado: estado,
           },
         },
       });
