@@ -410,7 +410,11 @@ export type Database = {
       }
       poupeja_users: {
         Row: {
+          address: string | null
+          birth_date: string | null
+          cpf: string | null
           created_at: string | null
+          current_plan_type: string | null
           email: string
           id: string
           name: string | null
@@ -419,7 +423,11 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string | null
+          current_plan_type?: string | null
           email: string
           id: string
           name?: string | null
@@ -428,7 +436,11 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          birth_date?: string | null
+          cpf?: string | null
           created_at?: string | null
+          current_plan_type?: string | null
           email?: string
           id?: string
           name?: string | null
@@ -576,6 +588,10 @@ export type Database = {
         }
         Returns: string
       }
+      sync_existing_user_plans: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       test_trigger_system: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -612,6 +628,10 @@ export type Database = {
           p_value_type?: string
         }
         Returns: string
+      }
+      validate_cpf: {
+        Args: { cpf_input: string }
+        Returns: boolean
       }
       validate_file_type: {
         Args: { allowed_extensions?: string[]; file_name: string }

@@ -73,6 +73,10 @@ export interface User {
   email: string;
   profileImage?: string;
   phone?: string;
+  cpf?: string;
+  birthDate?: string; // ISO date string
+  address?: string;
+  currentPlanType?: string;
   achievements: Achievement[];
 }
 
