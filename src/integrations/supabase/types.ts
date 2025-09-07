@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      address_backup: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       poupeja_categories: {
         Row: {
           color: string
@@ -411,39 +432,60 @@ export type Database = {
       poupeja_users: {
         Row: {
           address: string | null
+          bairro: string | null
           birth_date: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
           cpf: string | null
           created_at: string | null
           current_plan_type: string | null
           email: string
+          estado: string | null
           id: string
+          logradouro: string | null
           name: string | null
+          numero: string | null
           phone: string | null
           profile_image: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          bairro?: string | null
           birth_date?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           cpf?: string | null
           created_at?: string | null
           current_plan_type?: string | null
           email: string
+          estado?: string | null
           id: string
+          logradouro?: string | null
           name?: string | null
+          numero?: string | null
           phone?: string | null
           profile_image?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          bairro?: string | null
           birth_date?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
           cpf?: string | null
           created_at?: string | null
           current_plan_type?: string | null
           email?: string
+          estado?: string | null
           id?: string
+          logradouro?: string | null
           name?: string | null
+          numero?: string | null
           phone?: string | null
           profile_image?: string | null
           updated_at?: string | null
