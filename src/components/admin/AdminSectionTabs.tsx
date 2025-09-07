@@ -1,21 +1,26 @@
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Palette, CreditCard, DollarSign, Phone, Database, Code } from 'lucide-react';
+import { Palette, CreditCard, DollarSign, Phone, Database, Code, Users } from 'lucide-react';
 import BrandingConfigManager from './BrandingConfigManager';
 import StripeConfigManager from './StripeConfigManager';
 import PlanPricingManager from './PlanPricingManager';
 import ContactConfigManager from './ContactConfigManager';
 import SystemConfigManager from './SystemConfigManager';
+import SubscriptionAuditManager from './SubscriptionAuditManager';
 import { PWAManifestGenerator } from './PWAManifestGenerator';
 
 const AdminSectionTabs: React.FC = () => {
   return (
     <Tabs defaultValue="system" className="w-full">
-      <TabsList className="grid w-full grid-cols-6">
+      <TabsList className="grid w-full grid-cols-7">
         <TabsTrigger value="system" className="flex items-center gap-2">
           <Database className="h-4 w-4" />
           Sistema
+        </TabsTrigger>
+        <TabsTrigger value="subscriptions" className="flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Assinaturas
         </TabsTrigger>
         <TabsTrigger value="branding" className="flex items-center gap-2">
           <Palette className="h-4 w-4" />
@@ -41,6 +46,10 @@ const AdminSectionTabs: React.FC = () => {
 
       <TabsContent value="system" className="mt-6">
         <SystemConfigManager />
+      </TabsContent>
+
+      <TabsContent value="subscriptions" className="mt-6">
+        <SubscriptionAuditManager />
       </TabsContent>
 
       <TabsContent value="branding" className="mt-6">

@@ -57,6 +57,25 @@ const PlanCard: React.FC<PlanCardProps> = ({
     try {
       setIsLoading(true);
       
+      // Se for upgrade ou downgrade, mostrar confirmação
+      if (canUpgrade || canDowngrade) {
+        const action = canUpgrade ? 'upgrade' : 'downgrade';
+        const newPlan = canUpgrade ? 'anual' : 'mensal';
+        const currentPlan = subscription?.plan_type === 'monthly' ? 'mensal' : 'anual';
+        
+        const confirmed = window.confirm(
+          `Confirma o ${action} do plano ${currentPlan} para ${newPlan}?\n\n` +
+          `• Seu plano atual será cancelado imediatamente\n` +
+          `• O novo plano será ativado agora\n` +
+          `• Você será cobrado pelo novo plano proporcionalmente`
+        );
+        
+        if (!confirmed) {
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       // Verificar se o usuário está autenticado
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) {
@@ -93,6 +112,15 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
       console.log('Usuário autenticado com sucesso');
       console.log('Token disponível:', !!session.access_token);
+
+      // Mostrar toast informativo para mudanças de plano
+      if (canUpgrade || canDowngrade) {
+        const action = canUpgrade ? 'upgrade para plano anual' : 'downgrade para plano mensal';
+        toast({
+          title: `Iniciando ${action}`,
+          description: "Seu plano atual será cancelado e o novo será ativado imediatamente.",
+        });
+      }
 
       // Invocar a função com o token explícito
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
@@ -252,7 +280,19 @@ const PlanCard: React.FC<PlanCardProps> = ({
 
         {canUpgrade && (
           <p className="text-center text-sm text-muted-foreground mt-2">
-            {t('plans.saveWithAnnual')}
+            ⚠️ Seu plano mensal será cancelado e substituído pelo anual
+          </p>
+        )}
+        
+        {canDowngrade && (
+          <p className="text-center text-sm text-muted-foreground mt-2">
+            ⚠️ Seu plano anual será cancelado e substituído pelo mensal
+          </p>
+        )}
+        
+        {isExpiredCurrentPlan && (
+          <p className="text-center text-sm text-orange-600 mt-2">
+            ⚠️ Sua assinatura expirou. Renove para continuar usando
           </p>
         )}
       </CardContent>

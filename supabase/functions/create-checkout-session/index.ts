@@ -197,7 +197,7 @@ serve(async (req) => {
     
     logStep("Stripe initialized successfully");
     
-    // Check if user already has a customer ID
+    // Check if user already has a customer ID and any active subscriptions
     const { data: customerData } = await supabaseClient
       .from("poupeja_customers")
       .select("stripe_customer_id")
@@ -206,6 +206,50 @@ serve(async (req) => {
     
     let customerId = customerData?.stripe_customer_id;
     logStep("Checked existing customer", { customerId });
+    
+    // If customer exists, check for active subscriptions and cancel them
+    if (customerId) {
+      logStep("Checking for existing active subscriptions");
+      
+      try {
+        const existingSubscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: 'active',
+          limit: 10
+        });
+        
+        logStep("Found existing subscriptions", { count: existingSubscriptions.data.length });
+        
+        // Cancel each active subscription
+        for (const existingSubscription of existingSubscriptions.data) {
+          logStep("Canceling existing subscription", { 
+            subscriptionId: existingSubscription.id,
+            currentPlanType: existingSubscription.items.data[0]?.price.recurring?.interval === 'year' ? 'annual' : 'monthly'
+          });
+          
+          await stripe.subscriptions.cancel(existingSubscription.id, {
+            prorate: true // This will prorate any unused time
+          });
+          
+          logStep("Successfully canceled subscription", { subscriptionId: existingSubscription.id });
+          
+          // Update our database to reflect the cancellation
+          await supabaseService.from("poupeja_subscriptions").update({
+            status: "canceled",
+            cancel_at_period_end: true,
+            updated_at: new Date().toISOString()
+          }).eq("stripe_subscription_id", existingSubscription.id);
+        }
+        
+        if (existingSubscriptions.data.length > 0) {
+          logStep("All existing subscriptions canceled", { canceledCount: existingSubscriptions.data.length });
+        }
+      } catch (subscriptionError) {
+        logStep("Error handling existing subscriptions", { error: subscriptionError.message });
+        // Don't throw here - we can still proceed to create the new subscription
+        console.warn("Failed to cancel existing subscriptions:", subscriptionError);
+      }
+    }
     
     // If no customer exists, create one
     if (!customerId) {

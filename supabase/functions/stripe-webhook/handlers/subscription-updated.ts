@@ -124,10 +124,21 @@ export async function handleSubscriptionUpdated(
       }
     }
     
-    // Use UPSERT instead of UPDATE to ensure record is created/updated
+    // If this subscription is being activated, mark any other subscriptions for this user as canceled
+    if (subscription.status === 'active') {
+      await supabase.from("poupeja_subscriptions").update({
+        status: "canceled",
+        cancel_at_period_end: true,
+        updated_at: new Date().toISOString()
+      }).eq("user_id", verifiedUserId).neq("stripe_subscription_id", subscription.id);
+      
+      console.log(`[SUBSCRIPTION-UPDATED] Marked other subscriptions as canceled for user ${verifiedUserId}`);
+    }
+
+    // Use UPSERT to update/create this specific subscription
     const upsertResult = await supabase.from("poupeja_subscriptions")
       .upsert(subscriptionData, { 
-        onConflict: 'user_id',
+        onConflict: 'stripe_subscription_id',
         ignoreDuplicates: false 
       });
     

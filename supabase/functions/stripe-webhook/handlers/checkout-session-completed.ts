@@ -72,6 +72,16 @@ export async function handleCheckoutSessionCompleted(
   // Use actual subscription status from Stripe instead of assuming "active"
   const subscriptionStatus = subscription.status; // This could be: incomplete, incomplete_expired, trialing, active, past_due, canceled, or unpaid
 
+  // Before creating the new subscription, ensure any old ones are marked as canceled
+  await supabase.from("poupeja_subscriptions").update({
+    status: "canceled",
+    cancel_at_period_end: true,
+    updated_at: new Date().toISOString()
+  }).eq("user_id", userId).neq("stripe_subscription_id", session.subscription);
+
+  console.log("Marked any previous subscriptions as canceled for user");
+
+  // Now insert/update the new subscription
   await supabase.from("poupeja_subscriptions").upsert({
     user_id: userId,
     stripe_customer_id: session.customer,
