@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
-import { getPlanTypeFromPriceId } from '@/utils/subscriptionUtils';
 import { useBrandingConfig } from '@/hooks/useBrandingConfig';
+import { savePendingCheckout, getCheckoutErrorMessage } from '@/utils/checkoutUtils';
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams();
@@ -191,7 +191,7 @@ const RegisterPage = () => {
     }
   
     try {
-      // Normaliza o número de telefone antes de enviar (remove caracteres não numéricos)
+      // Normaliza os dados antes de enviar
       const formattedPhone = whatsapp.replace(/\D/g, '');
       const formattedCpf = cpf.replace(/\D/g, '');
       const formattedCep = cep.replace(/\D/g, '');
@@ -203,6 +203,7 @@ const RegisterPage = () => {
   
       console.log('Iniciando processo de registro...');
       
+      // Registrar usuário
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -233,80 +234,33 @@ const RegisterPage = () => {
 
       console.log('Usuário criado com sucesso');
       
-      // Aguardar um pouco para que o trigger seja executado
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Salvar informações do plano no localStorage para usar após o login
+      savePendingCheckout(priceId, email);
       
-      // Tentar fazer login imediatamente
-      console.log('Fazendo login automático...');
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (loginError) {
-        console.error('Erro no login automático:', loginError);
-        throw new Error('Conta criada, mas houve erro no login automático. Tente fazer login manualmente.');
-      }
-
-      if (!loginData.session) {
-        throw new Error('Sessão não estabelecida após login.');
-      }
-
-      console.log('Login automático bem-sucedido');
-      
-      // Mostrar feedback de progresso
+      // Mostrar feedback de sucesso
       toast({
-        title: "Conta criada e login realizado!",
-        description: "Preparando checkout...",
+        title: "Conta criada com sucesso!",
+        description: "Redirecionando para login...",
       });
       
-      // Converter priceId para planType
-      const planType = await getPlanTypeFromPriceId(priceId);
-      
-      if (!planType) {
-        throw new Error("Tipo de plano inválido. Verifique as configurações.");
-      }
-      
-      // Chamar a Supabase Function para criar a sessão de checkout do Stripe
-      console.log('Chamando create-checkout-session...');
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('create-checkout-session', {
-        body: { 
-          planType,
-          successUrl: `${window.location.origin}/payment-success?email=${encodeURIComponent(loginData.session.user.email || '')}`,
-          cancelUrl: `${window.location.origin}/register?canceled=true`
-        },
-        headers: {
-          Authorization: `Bearer ${loginData.session.access_token}`,
-        }
-      });
-      
-      if (functionError) {
-        console.error('Erro na função de checkout:', functionError);
-        throw new Error(`Erro no checkout: ${functionError.message}`);
-      }
-
-      console.log('Dados retornados pela função create-checkout-session:', functionData);
-
-      if (functionData && functionData.url) {
-        console.log('Redirecionando para checkout:', functionData.url);
-        
-        toast({
-          title: "Redirecionando para pagamento...",
-          description: "Você será levado para completar o pagamento.",
+      // Redirecionar para login com as informações do plano
+      setTimeout(() => {
+        navigate(`/login?email=${encodeURIComponent(email)}&checkout=pending`, {
+          state: { 
+            email,
+            message: "Sua conta foi criada! Faça login para completar o pagamento.",
+            showCheckoutMessage: true
+          }
         });
-        
-        // Redirecionar para o checkout
-        setTimeout(() => {
-          window.location.href = functionData.url;
-        }, 1000);
-        
-        return;
-      } else {
-        throw new Error('Não foi possível obter a URL de checkout.');
-      }
+      }, 1500);
+      
     } catch (err: any) {
-      console.error('Erro no processo de registro ou checkout:', err);
-      setError(err.message || 'Ocorreu um erro desconhecido.');
+      console.error('Erro no processo de registro:', err);
+      
+      // Usar função utilitária para mensagem de erro mais específica
+      const errorMessage = getCheckoutErrorMessage(err);
+      
+      setError(errorMessage);
       setIsLoading(false);
       
       // Remover classe de loading em caso de erro
@@ -326,7 +280,7 @@ const RegisterPage = () => {
         <div className="flex flex-col items-center gap-2">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
           <p className="text-sm font-medium">
-            {isLoading && error ? 'Processando...' : 'Criando conta e preparando checkout...'}
+            Criando sua conta...
           </p>
         </div>
       </div>

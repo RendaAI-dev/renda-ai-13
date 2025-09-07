@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,9 +11,11 @@ import { loginUser } from '@/services/authService';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useBrandingConfig } from '@/hooks/useBrandingConfig';
+import { useCheckoutFlow } from '@/hooks/useCheckoutFlow';
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { t } = usePreferences();
   const { user, isLoading: authLoading } = useAppContext();
@@ -23,13 +25,46 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Initialize checkout flow hook
+  useCheckoutFlow();
+
+  // Set email from URL params or state
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const emailParam = urlParams.get('email');
+    const stateEmail = location.state?.email;
+    
+    if (emailParam) {
+      setEmail(decodeURIComponent(emailParam));
+    } else if (stateEmail) {
+      setEmail(stateEmail);
+    }
+
+    // Show message if coming from registration
+    if (location.state?.message) {
+      toast({
+        title: "Conta criada!",
+        description: location.state.message,
+      });
+    }
+  }, [location, toast]);
+
   // Check if user is already logged in
   useEffect(() => {    
     if (!authLoading && user) {
-      // Verificar se o usuário é admin
+      // Check for pending checkout first
+      const urlParams = new URLSearchParams(location.search);
+      const checkoutParam = urlParams.get('checkout');
+      
+      if (checkoutParam === 'pending') {
+        // Let useCheckoutFlow handle this
+        return;
+      }
+      
+      // Otherwise check user role and redirect normally
       checkUserRoleAndRedirect(user.id);
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, location]);
 
   const checkUserRoleAndRedirect = async (userId: string) => {
     try {
@@ -78,8 +113,21 @@ const LoginPage = () => {
           description: t('auth.redirecting') || 'Redirecionando...',
         });
         
-        // Verificar se é admin e redirecionar adequadamente
-        await checkUserRoleAndRedirect(authData.user.id);
+        // Check for pending checkout first
+        const urlParams = new URLSearchParams(location.search);
+        const checkoutParam = urlParams.get('checkout');
+        
+        if (checkoutParam === 'pending') {
+          // The useCheckoutFlow hook will handle the checkout process
+          // Just wait a moment for it to trigger
+          setTimeout(() => {
+            // If checkout hook didn't redirect, redirect normally
+            checkUserRoleAndRedirect(authData.user.id);
+          }, 2000);
+        } else {
+          // Normal login flow - check user role and redirect
+          await checkUserRoleAndRedirect(authData.user.id);
+        }
       } else {
         throw new Error('Login successful but no session established');
       }
