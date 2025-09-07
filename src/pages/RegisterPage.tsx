@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from "@/hooks/use-toast";
 import { useBrandingConfig } from '@/hooks/useBrandingConfig';
 import { savePendingCheckout, getCheckoutErrorMessage } from '@/utils/checkoutUtils';
+import { debugUserRegistration } from '@/utils/debugUtils';
 
 const RegisterPage = () => {
   const [searchParams] = useSearchParams();
@@ -232,7 +233,41 @@ const RegisterPage = () => {
         throw new Error('Usuário não retornado após o cadastro.');
       }
 
-      console.log('Usuário criado com sucesso');
+      console.log('✅ Usuário criado com sucesso - ID:', signUpData.user.id);
+      console.log('📋 Dados enviados para auth.users:', {
+        full_name: fullName,
+        phone: formattedPhone,
+        cpf: formattedCpf,
+        birth_date: birthDate,
+        cep: formattedCep,
+        logradouro: logradouro,
+        numero: numero,
+        complemento: complemento,
+        bairro: bairro,
+        cidade: cidade,
+        estado: estado,
+      });
+      
+      // Aguardar um pouco para o trigger processar
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Verificar se os dados foram salvos na tabela poupeja_users
+      console.log('🔍 Verificando se usuário foi criado em poupeja_users...');
+      const { data: userData, error: userError } = await supabase
+        .from('poupeja_users')
+        .select('*')
+        .eq('id', signUpData.user.id)
+        .single();
+        
+      if (userError) {
+        console.error('❌ Erro ao buscar usuário em poupeja_users:', userError);
+      } else {
+        console.log('✅ Usuário encontrado em poupeja_users:', userData);
+      }
+      
+      // Executar debug completo
+      const debugResult = await debugUserRegistration(signUpData.user.id);
+      console.log('🔍 Resultado do debug completo:', debugResult);
       
       // Salvar informações do plano no localStorage para usar após o login
       savePendingCheckout(priceId, email);

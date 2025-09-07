@@ -4,9 +4,15 @@ import { validateCPF, formatCPF } from "@/utils/cpfUtils";
 
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
+    console.log('🔍 [userService] Buscando usuário autenticado...');
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) return null;
+    if (!user) {
+      console.log('❌ [userService] Nenhum usuário autenticado encontrado');
+      return null;
+    }
+    
+    console.log('✅ [userService] Usuário autenticado encontrado:', user.id);
     
     const { data, error } = await supabase
       .from("poupeja_users")
@@ -15,9 +21,25 @@ export const getCurrentUser = async (): Promise<User | null> => {
       .single();
     
     if (error) {
-      console.error("Error fetching user profile:", error);
+      console.error("❌ [userService] Erro ao buscar perfil do usuário na poupeja_users:", error);
+      console.log("🔍 [userService] Tentando verificar se usuário existe na tabela...");
+      
+      // Verificar se o usuário existe na tabela
+      const { data: checkData, error: checkError } = await supabase
+        .from("poupeja_users")
+        .select("id, email, name")
+        .eq("id", user.id);
+        
+      if (checkError) {
+        console.error("❌ [userService] Erro na verificação:", checkError);
+      } else {
+        console.log("📊 [userService] Resultado da verificação:", checkData);
+      }
+      
       return null;
     }
+    
+    console.log('✅ [userService] Dados do usuário encontrados em poupeja_users:', data);
     
     return {
       id: data.id,
