@@ -18,6 +18,9 @@ const RegisterPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [cpf, setCpf] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [address, setAddress] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -113,6 +116,55 @@ const RegisterPage = () => {
     setWhatsapp(formattedValue);
   };
 
+  // Função para formatar CPF como XXX.XXX.XXX-XX
+  const formatCpf = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    
+    if (numbers.length <= 3) {
+      return numbers;
+    } else if (numbers.length <= 6) {
+      return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    } else if (numbers.length <= 9) {
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    } else {
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+    }
+  };
+
+  // Função para lidar com a mudança no campo de CPF
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formattedValue = formatCpf(e.target.value);
+    setCpf(formattedValue);
+  };
+
+  // Função para validar CPF
+  const validateCpf = (cpf: string) => {
+    const numbers = cpf.replace(/\D/g, '');
+    
+    if (numbers.length !== 11) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1+$/.test(numbers)) return false;
+    
+    // Validação do primeiro dígito verificador
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(numbers[i]) * (10 - i);
+    }
+    let digit1 = 11 - (sum % 11);
+    if (digit1 >= 10) digit1 = 0;
+    
+    // Validação do segundo dígito verificador
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(numbers[i]) * (11 - i);
+    }
+    let digit2 = 11 - (sum % 11);
+    if (digit2 >= 10) digit2 = 0;
+    
+    return parseInt(numbers[9]) === digit1 && parseInt(numbers[10]) === digit2;
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsLoading(true);
@@ -135,6 +187,12 @@ const RegisterPage = () => {
     try {
       // Normaliza o número de telefone antes de enviar (remove caracteres não numéricos)
       const formattedPhone = whatsapp.replace(/\D/g, '');
+      const formattedCpf = cpf.replace(/\D/g, '');
+      
+      // Validar CPF antes de prosseguir
+      if (!validateCpf(cpf)) {
+        throw new Error('CPF inválido. Por favor, verifique o número digitado.');
+      }
   
       console.log('Iniciando processo de registro...');
       
@@ -145,6 +203,9 @@ const RegisterPage = () => {
           data: {
             full_name: fullName,
             phone: formattedPhone,
+            cpf: formattedCpf,
+            birth_date: birthDate,
+            address: address,
           },
         },
       });
@@ -388,6 +449,57 @@ const RegisterPage = () => {
             />
             <p className="mt-2 text-xs text-gray-500">
               Este número será utilizado para enviar mensagens e notificações importantes via WhatsApp.
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="cpf">CPF</Label>
+            <Input
+              id="cpf"
+              name="cpf"
+              type="text"
+              autoComplete="off"
+              required
+              placeholder="XXX.XXX.XXX-XX"
+              value={cpf}
+              onChange={handleCpfChange}
+              className="mt-1"
+              maxLength={14}
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              Digite seu CPF para validação de identidade.
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="birthDate">Data de Nascimento</Label>
+            <Input
+              id="birthDate"
+              name="birthDate"
+              type="date"
+              autoComplete="bday"
+              required
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="address">Endereço Completo</Label>
+            <Input
+              id="address"
+              name="address"
+              type="text"
+              autoComplete="street-address"
+              required
+              placeholder="Rua, número, bairro, cidade, estado"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              className="mt-1"
+            />
+            <p className="mt-2 text-xs text-gray-500">
+              Endereço completo com rua, número, bairro, cidade e estado.
             </p>
           </div>
 
