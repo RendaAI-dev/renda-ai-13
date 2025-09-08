@@ -518,6 +518,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_user_data_corrections: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          corrected_users: number
+          details: string
+        }[]
+      }
       buscar_cadastro_por_email: {
         Args: { p_email: string }
         Returns: {
