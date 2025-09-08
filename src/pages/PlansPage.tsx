@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { usePlanConfig } from '@/hooks/usePlanConfig';
 import { Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const PlansPage = () => {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,19 @@ const PlansPage = () => {
 
   const success = searchParams.get('success');
   const canceled = searchParams.get('canceled');
+
+  // Debug function to check subscription logic
+  const debugSubscription = async () => {
+    try {
+      const { data } = await supabase.functions.invoke('debug-subscription', {
+        body: { email: 'fernando.testerenda18@gmail.com' }
+      });
+      console.log('=== DEBUG SUBSCRIPTION RESULTS ===');
+      console.log(JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Debug error:', error);
+    }
+  };
 
   useEffect(() => {
     if (success === 'true') {
@@ -40,6 +54,9 @@ const PlansPage = () => {
       // Remove the search params from URL
       navigate('/plans', { replace: true });
     }
+    
+    // Execute debug function to understand the plan detection logic
+    debugSubscription();
   }, [success, canceled, navigate, toast]);
 
   // Mostrar carregamento enquanto busca as configurações
