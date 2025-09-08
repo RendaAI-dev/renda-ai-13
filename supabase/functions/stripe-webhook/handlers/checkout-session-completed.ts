@@ -39,29 +39,27 @@ export async function handleCheckoutSessionCompleted(
   let planType;
   
   try {
-    // Fetch plan configurations from database directly
-    const { data: planConfigData } = await supabase
+    // Fetch price IDs directly from settings table for accurate mapping
+    const { data: priceSettings } = await supabase
       .from('poupeja_settings')
-      .select('value')
-      .eq('key', 'plan_config')
-      .single();
+      .select('key, value')
+      .in('key', ['stripe_price_id_monthly', 'stripe_price_id_annual']);
     
-    if (planConfigData?.value) {
-      const planConfig = JSON.parse(planConfigData.value);
-      if (priceId === planConfig.prices?.monthly?.priceId) {
-        planType = "monthly";
-      } else if (priceId === planConfig.prices?.annual?.priceId) {
-        planType = "annual";
-      } else {
-        console.warn(`Unknown price ID: ${priceId}. Using interval fallback.`);
-        planType = subscription.items.data[0].price.recurring?.interval === 'year' ? "annual" : "monthly";
-      }
+    const monthlyPriceId = priceSettings?.find(s => s.key === 'stripe_price_id_monthly')?.value;
+    const annualPriceId = priceSettings?.find(s => s.key === 'stripe_price_id_annual')?.value;
+    
+    console.log(`Price mapping - ID: ${priceId}, Monthly: ${monthlyPriceId}, Annual: ${annualPriceId}`);
+    
+    if (priceId === monthlyPriceId) {
+      planType = "monthly";
+    } else if (priceId === annualPriceId) {
+      planType = "annual";
     } else {
-      // Fallback to interval detection
+      console.warn(`Unknown price ID: ${priceId}. Using interval fallback.`);
       planType = subscription.items.data[0].price.recurring?.interval === 'year' ? "annual" : "monthly";
     }
   } catch (error) {
-    console.error('Error fetching plan config, using interval fallback:', error);
+    console.error('Error fetching price IDs, using interval fallback:', error);
     // Check interval as final fallback
     planType = subscription.items.data[0].price.recurring?.interval === 'year' ? "annual" : "monthly";
   }
