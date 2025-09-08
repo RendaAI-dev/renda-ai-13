@@ -19,14 +19,14 @@ export async function handleSubscriptionUpdated(
     }
     
     if (!userId) {
-      // Last resort: search the table by stripe_subscription_id
-      const { data: existingSubscription } = await supabase
-        .from("poupeja_subscriptions")
-        .select("user_id")
+      // Last resort: search the poupeja_users table by stripe_subscription_id
+      const { data: existingUser } = await supabase
+        .from("poupeja_users")
+        .select("id")
         .eq("stripe_subscription_id", subscription.id)
         .single();
       
-      userId = existingSubscription?.user_id;
+      userId = existingUser?.id;
     }
     
     if (!userId) {
