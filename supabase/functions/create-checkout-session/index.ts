@@ -233,9 +233,11 @@ serve(async (req) => {
           
           logStep("Successfully canceled subscription", { subscriptionId: existingSubscription.id });
           
-          // Update our database to reflect the cancellation
-          await supabaseService.from("poupeja_subscriptions").update({
-            status: "canceled",
+          // Update user's subscription status to reflect the cancellation
+          await supabaseService.from("poupeja_users").update({
+            subscription_status: "canceled",
+            current_plan_type: "free",
+            plan_value: null,
             cancel_at_period_end: true,
             updated_at: new Date().toISOString()
           }).eq("stripe_subscription_id", existingSubscription.id);

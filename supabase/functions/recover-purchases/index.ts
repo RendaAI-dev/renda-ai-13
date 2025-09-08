@@ -89,12 +89,12 @@ serve(async (req) => {
           }
 
           // Criar em poupeja_users
-          await supabase.from('poupeja_users').insert({
-            id: newUser.user!.id,
-            email: customerEmail,
-            name: session.customer_details?.name || customerEmail.split('@')[0],
-            phone: session.customer_details?.phone || null
-          });
+            await supabase.from('poupeja_users').insert({
+              id: newUser.user!.id,
+              email: customerEmail,
+              name: session.customer_details?.name || customerEmail.split('@')[0],
+              phone: session.customer_details?.phone || null
+            });
 
           // Processar assinatura
           if (session.subscription) {
@@ -108,17 +108,18 @@ serve(async (req) => {
               }
             }
 
-            await supabase.from('poupeja_subscriptions').upsert({
-              user_id: newUser.user!.id,
+            // Update user with subscription data
+            await supabase.from('poupeja_users').update({
               stripe_customer_id: session.customer as string,
               stripe_subscription_id: subscription.id,
-              status: subscription.status,
-              plan_type: planType,
+              subscription_status: subscription.status,
+              current_plan_type: subscription.status === 'active' ? planType : 'free',
+              plan_value: subscription.status === 'active' ? (planType === 'annual' ? 538.92 : 49.90) : null,
               current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
               current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
               cancel_at_period_end: subscription.cancel_at_period_end,
               updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id' });
+            }).eq('id', newUser.user!.id);
           }
 
           processedCount++;

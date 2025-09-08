@@ -85,17 +85,18 @@ serve(async (req) => {
           limit: 10
         });
 
-        // Get subscriptions from our database
-        const { data: dbSubscriptions } = await supabaseService
-          .from("poupeja_subscriptions")
-          .select("*")
-          .eq("user_id", customer.user_id)
-          .eq("status", "active");
+        // Get user subscription status from our database
+        const { data: dbUser } = await supabaseService
+          .from("poupeja_users")
+          .select("stripe_subscription_id, subscription_status, current_plan_type, plan_value")
+          .eq("id", customer.user_id)
+          .eq("subscription_status", "active")
+          .single();
 
         logStep("Checking customer", {
           userId: customer.user_id,
           stripeActiveCount: stripeSubscriptions.data.length,
-          dbActiveCount: dbSubscriptions?.length || 0
+          dbHasActiveSubscription: !!dbUser
         });
 
         // Check for multiple active subscriptions in Stripe
@@ -128,9 +129,11 @@ serve(async (req) => {
                 prorate: true
               });
               
-              // Update database
-              await supabaseService.from("poupeja_subscriptions").update({
-                status: "canceled",
+              // Update user database
+              await supabaseService.from("poupeja_users").update({
+                subscription_status: "canceled",
+                current_plan_type: "free",
+                plan_value: null,
                 cancel_at_period_end: true,
                 updated_at: new Date().toISOString()
               }).eq("stripe_subscription_id", oldSubscription.id);
