@@ -576,6 +576,13 @@ export type Database = {
           fixed_count: number
         }[]
       }
+      fix_subscription_plan_sync: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          details: string
+          fixed_users: number
+        }[]
+      }
       generate_upload_path: {
         Args: { file_extension: string; user_id: string }
         Returns: string
