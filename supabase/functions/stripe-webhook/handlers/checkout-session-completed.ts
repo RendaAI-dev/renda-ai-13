@@ -70,34 +70,40 @@ export async function handleCheckoutSessionCompleted(
   // Use actual subscription status from Stripe instead of assuming "active"
   const subscriptionStatus = subscription.status; // This could be: incomplete, incomplete_expired, trialing, active, past_due, canceled, or unpaid
 
-  // Before creating the new subscription, ensure any old ones are marked as canceled
-  await supabase.from("poupeja_subscriptions").update({
-    status: "canceled",
-    cancel_at_period_end: true,
-    updated_at: new Date().toISOString()
-  }).eq("user_id", userId).neq("stripe_subscription_id", session.subscription);
-
-  console.log("Marked any previous subscriptions as canceled for user");
-
-  // Now insert/update the new subscription
-  await supabase.from("poupeja_subscriptions").upsert({
-    user_id: userId,
-    stripe_customer_id: session.customer,
-    stripe_subscription_id: session.subscription,
-    status: subscriptionStatus, // Use actual status from Stripe
-    plan_type: planType,
+  // Update user subscription data directly
+  const userData = {
+    stripe_customer_id: subscription.customer,
+    stripe_subscription_id: subscription.id,
+    subscription_status: subscriptionStatus,
+    current_plan_type: subscriptionStatus === 'active' ? planType : 'free',
+    plan_value: subscriptionStatus === 'active' ? planValue : null,
     current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
     current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-    cancel_at_period_end: subscription.cancel_at_period_end
+    cancel_at_period_end: subscription.cancel_at_period_end || false,
+    updated_at: new Date().toISOString()
+  };
+
+  console.log(`[CHECKOUT-COMPLETED] Updating user subscription data:`, {
+    subscriptionId: session.subscription,
+    userId,
+    planType,
+    planValue,
+    status: subscriptionStatus
   });
 
-  // Update plan_value in poupeja_users table
-  if (planValue) {
-    await supabase.from("poupeja_users").update({
-      plan_value: planValue
-    }).eq("id", userId);
-    console.log(`Plan value updated in poupeja_users: ${planValue} for user ${userId}`);
+  // Update user subscription data
+  const { data: userResult, error: userError } = await supabase
+    .from("poupeja_users")
+    .update(userData)
+    .eq("id", userId)
+    .select();
+
+  if (userError) {
+    console.error(`[CHECKOUT-COMPLETED] Error updating user subscription:`, userError);
+    throw new Error(`Failed to update user subscription: ${userError.message}`);
   }
+
+  console.log(`[CHECKOUT-COMPLETED] Successfully updated user subscription for: ${userId}`);
 
   console.log(`Subscription created/updated with plan ${planType} and status ${subscriptionStatus}`);
 }

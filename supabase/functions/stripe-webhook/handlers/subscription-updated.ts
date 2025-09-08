@@ -124,29 +124,58 @@ export async function handleSubscriptionUpdated(
     
     // If this subscription is being activated, mark any other subscriptions for this user as canceled
     if (subscription.status === 'active') {
-      await supabase.from("poupeja_subscriptions").update({
-        status: "canceled",
-        cancel_at_period_end: true,
-        updated_at: new Date().toISOString()
-      }).eq("user_id", verifiedUserId).neq("stripe_subscription_id", subscription.id);
+      console.log(`[SUBSCRIPTION-UPDATED] Deactivating other user subscriptions for user: ${verifiedUserId}`);
+      await supabase
+        .from("poupeja_users")
+        .update({
+          subscription_status: "canceled",
+          current_plan_type: "free",
+          plan_value: null,
+          updated_at: new Date().toISOString()
+        })
+        .neq("stripe_subscription_id", subscription.id)
+        .eq("subscription_status", "active");
       
-      console.log(`[SUBSCRIPTION-UPDATED] Marked other subscriptions as canceled for user ${verifiedUserId}`);
+      console.log(`[SUBSCRIPTION-UPDATED] Deactivated other subscriptions for user ${verifiedUserId}`);
     }
 
-    // Use UPSERT to update/create this specific subscription
-    const upsertResult = await supabase.from("poupeja_subscriptions")
-      .upsert(subscriptionData, { 
-        onConflict: 'stripe_subscription_id',
-        ignoreDuplicates: false 
-      });
-    
-    console.log("Upsert result:", JSON.stringify(upsertResult));
-    
-    if (upsertResult.error) {
-      throw new Error(`Supabase upsert error: ${upsertResult.error.message}`);
+    // Update user data directly in poupeja_users table
+    const userData = {
+      stripe_customer_id: subscription.customer,
+      stripe_subscription_id: subscription.id,
+      subscription_status: subscription.status,
+      current_plan_type: subscription.status === 'active' ? subscriptionData.plan_type : 'free',
+      plan_value: subscription.status === 'active' && subscriptionData.plan_value ? subscriptionData.plan_value : null,
+      current_period_start: subscriptionData.current_period_start,
+      current_period_end: subscriptionData.current_period_end,
+      cancel_at_period_end: subscription.cancel_at_period_end || false,
+      updated_at: new Date().toISOString()
+    };
+
+    console.log(`[SUBSCRIPTION-UPDATED] Prepared user data:`, {
+      subscriptionId: subscription.id,
+      userId: verifiedUserId,
+      planType: subscriptionData.plan_type,
+      status: subscription.status
+    });
+
+    // Update the user's subscription data
+    const { data: updatedData, error: updateError } = await supabase
+      .from("poupeja_users")
+      .update(userData)
+      .eq("id", verifiedUserId)
+      .select();
+
+    if (updateError) {
+      console.error(`[SUBSCRIPTION-UPDATED] Error updating user subscription:`, updateError);
+      throw new Error(`Failed to update user subscription: ${updateError.message}`);
     }
-    
-    console.log(`Subscription upserted successfully: ${subscription.id}`);
+
+    console.log(`[SUBSCRIPTION-UPDATED] Successfully updated user subscription:`, {
+      subscriptionId: subscription.id,
+      status: subscription.status,
+      planType: subscriptionData.plan_type
+    });
   } catch (updateError) {
     console.error("Error updating subscription:", updateError);
     throw updateError;

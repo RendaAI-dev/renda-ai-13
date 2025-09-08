@@ -194,70 +194,33 @@ serve(async (req) => {
             }
           }
 
-          // Calcular plan_value baseado no price do Stripe
-          let planValue = null;
-          if (subscription.items.data.length > 0) {
-            const amount = subscription.items.data[0].price.unit_amount;
-            if (amount) {
-              planValue = amount / 100; // Converter de centavos para reais
-            }
-          }
-
-          // Inserir/atualizar assinatura
-          const subscriptionData = {
-            user_id: userId,
-            stripe_customer_id: customer.id,
+          // Update user subscription data directly
+          const planValue = subscription.items?.data?.[0]?.price?.unit_amount ? subscription.items.data[0].price.unit_amount / 100 : null;
+          
+          const userData = {
+            stripe_customer_id: subscription.customer,
             stripe_subscription_id: subscription.id,
-            status: subscription.status,
-            plan_type: planType,
+            subscription_status: subscription.status,
+            current_plan_type: subscription.status === 'active' ? planType : 'free',
+            plan_value: subscription.status === 'active' ? planValue : null,
             current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
             current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            cancel_at_period_end: subscription.cancel_at_period_end,
+            cancel_at_period_end: subscription.cancel_at_period_end || false,
             updated_at: new Date().toISOString()
           };
-          
-          // Log dos dados antes de inserir
-          logStep("Subscription data to upsert", { 
-            subscriptionId: subscription.id,
-            periods: {
-              raw_start: subscription.current_period_start,
-              raw_end: subscription.current_period_end,
-              formatted_start: subscriptionData.current_period_start,
-              formatted_end: subscriptionData.current_period_end
-            }
-          });
 
-          // Primeiro, deletar assinatura existente do usuário para evitar conflitos
-          await supabase
-            .from('poupeja_subscriptions')
-            .delete()
-            .eq('user_id', userId);
+          const { data: updatedData, error: updateError } = await supabase
+            .from("poupeja_users")
+            .update(userData)
+            .eq("id", userId)
+            .select();
 
-          // Inserir nova assinatura
-          const { data, error: subscriptionError } = await supabase
-            .from('poupeja_subscriptions')
-            .insert(subscriptionData);
-
-          if (subscriptionError) {
-            logStep("Error upserting subscription", { 
-              error: subscriptionError,
-              errorCode: subscriptionError.code,
-              errorMessage: subscriptionError.message,
-              errorDetails: subscriptionError.details,
-              userId,
-              subscriptionId: subscription.id
-            });
-            continue;
+          if (updateError) {
+            console.error(`[SYNC-SUBSCRIPTIONS] Error updating user subscription ${subscription.id}:`, updateError);
+            return;
           }
 
-          // Atualizar plan_value na tabela poupeja_users
-          if (planValue) {
-            await supabase
-              .from('poupeja_users')
-              .update({ plan_value: planValue })
-              .eq('id', userId);
-            logStep("Updated plan value in poupeja_users", { userId, planValue });
-          }
+          console.log(`[SYNC-SUBSCRIPTIONS] Updated plan value in poupeja_users - {\"userId\":\"${userId}\",\"planValue\":${planValue}}`);
 
           syncedCount++;
           logStep("Subscription synced", { subscriptionId: subscription.id });

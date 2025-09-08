@@ -7,11 +7,13 @@ export async function handleSubscriptionDeleted(
   
   console.log(`[SUBSCRIPTION-DELETED] Processing deletion for subscription: ${subscription.id}`);
   
-  // Update subscription status to canceled instead of deleting the record
+  // Update user subscription status to canceled
   const { data, error } = await supabase
-    .from("poupeja_subscriptions")
+    .from("poupeja_users")
     .update({
-      status: "canceled",
+      subscription_status: "canceled",
+      current_plan_type: "free",
+      plan_value: null,
       cancel_at_period_end: true,
       updated_at: new Date().toISOString()
     })
@@ -19,21 +21,12 @@ export async function handleSubscriptionDeleted(
     .select();
 
   if (error) {
-    console.error(`[SUBSCRIPTION-DELETED] Error updating subscription status:`, error);
-    throw new Error(`Failed to update subscription status: ${error.message}`);
+    console.error(`[SUBSCRIPTION-DELETED] Error updating user subscription status:`, error);
+    throw new Error(`Failed to update user subscription status: ${error.message}`);
   }
 
-  // Update plan_value in poupeja_users table to null
-  try {
-    const subscriptionData = data?.[0];
-    if (subscriptionData?.user_id) {
-      await supabase.from("poupeja_users").update({
-        plan_value: null
-      }).eq("id", subscriptionData.user_id);
-      console.log(`[SUBSCRIPTION-DELETED] Plan value cleared for user: ${subscriptionData.user_id}`);
-    }
-  } catch (planValueError) {
-    console.error("[SUBSCRIPTION-DELETED] Error clearing plan value:", planValueError);
+  if (data && data.length > 0) {
+    console.log(`[SUBSCRIPTION-DELETED] Subscription canceled for user: ${data[0].id}`);
   }
 
   console.log(`[SUBSCRIPTION-DELETED] Subscription marked as canceled: ${subscription.id}`, data);

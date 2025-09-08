@@ -20,11 +20,16 @@ export async function handleInvoicePaymentSucceeded(
   
   console.log(`Updating subscription ${subscriptionId} to status: ${subscription.status}`);
 
-  // Update subscription status to reflect successful payment
+  // Update user subscription status to reflect successful payment
+  const planValue = subscription.plan?.amount ? subscription.plan.amount / 100 : null;
+  const planType = subscription.plan?.interval === 'year' ? 'annual' : 'monthly';
+  
   const { error } = await supabase
-    .from("poupeja_subscriptions")
+    .from("poupeja_users")
     .update({
-      status: subscription.status, // Should be "active" after successful payment
+      subscription_status: subscription.status, // Should be "active" after successful payment
+      current_plan_type: planType,
+      plan_value: planValue,
       current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
       current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
       cancel_at_period_end: subscription.cancel_at_period_end
@@ -32,20 +37,11 @@ export async function handleInvoicePaymentSucceeded(
     .eq("stripe_subscription_id", subscriptionId);
 
   if (error) {
-    console.error("Error updating subscription after payment success:", error);
+    console.error("Error updating user subscription after payment success:", error);
     throw error;
   }
 
-  // Update plan_value in poupeja_users table
-  try {
-    const planValue = subscription.plan?.amount ? subscription.plan.amount / 100 : null;
-    await supabase.from("poupeja_users").update({
-      plan_value: planValue
-    }).eq("id", (await supabase.from("poupeja_subscriptions").select("user_id").eq("stripe_subscription_id", subscriptionId).single()).data?.user_id);
-    console.log(`Plan value updated: ${planValue}`);
-  } catch (planValueError) {
-    console.error("Error updating plan value:", planValueError);
-  }
+  console.log(`User subscription updated after successful payment: ${subscriptionId}`);
 
   console.log(`Subscription ${subscriptionId} successfully updated after payment confirmation`);
 }

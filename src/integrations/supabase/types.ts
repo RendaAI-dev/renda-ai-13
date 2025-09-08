@@ -292,51 +292,6 @@ export type Database = {
           },
         ]
       }
-      poupeja_subscriptions: {
-        Row: {
-          cancel_at_period_end: boolean | null
-          created_at: string | null
-          current_period_end: string | null
-          current_period_start: string | null
-          id: string
-          plan_type: string
-          plan_value: number | null
-          status: string
-          stripe_customer_id: string | null
-          stripe_subscription_id: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          cancel_at_period_end?: boolean | null
-          created_at?: string | null
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          plan_type: string
-          plan_value?: number | null
-          status: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          cancel_at_period_end?: boolean | null
-          created_at?: string | null
-          current_period_end?: string | null
-          current_period_start?: string | null
-          id?: string
-          plan_type?: string
-          plan_value?: number | null
-          status?: string
-          stripe_customer_id?: string | null
-          stripe_subscription_id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
       poupeja_transactions: {
         Row: {
           amount: number
@@ -436,11 +391,14 @@ export type Database = {
         Row: {
           bairro: string | null
           birth_date: string | null
+          cancel_at_period_end: boolean | null
           cep: string | null
           cidade: string | null
           complemento: string | null
           cpf: string | null
           created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
           current_plan_type: string | null
           email: string
           estado: string | null
@@ -451,16 +409,22 @@ export type Database = {
           phone: string | null
           plan_value: number | null
           profile_image: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
           updated_at: string | null
         }
         Insert: {
           bairro?: string | null
           birth_date?: string | null
+          cancel_at_period_end?: boolean | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           cpf?: string | null
           created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
           current_plan_type?: string | null
           email: string
           estado?: string | null
@@ -471,16 +435,22 @@ export type Database = {
           phone?: string | null
           plan_value?: number | null
           profile_image?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           updated_at?: string | null
         }
         Update: {
           bairro?: string | null
           birth_date?: string | null
+          cancel_at_period_end?: boolean | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           cpf?: string | null
           created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
           current_plan_type?: string | null
           email?: string
           estado?: string | null
@@ -491,6 +461,9 @@ export type Database = {
           phone?: string | null
           plan_value?: number | null
           profile_image?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           updated_at?: string | null
         }
         Relationships: []

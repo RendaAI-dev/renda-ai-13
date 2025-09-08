@@ -72,23 +72,33 @@ serve(async (req) => {
       throw new Error("User not found - email or valid token required");
     }
 
-    // Buscar assinatura do usuário usando service role
-    const { data: subscription, error: subscriptionError } = await supabaseService
-      .from("poupeja_subscriptions")
-      .select("*")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .single();
+  // Get user's subscription data directly from poupeja_users
+  const { data: userData, error: userError } = await supabaseService
+    .from('poupeja_users')
+    .select('subscription_status, current_plan_type, plan_value, current_period_end, cancel_at_period_end, stripe_subscription_id')
+    .eq('id', user.id)
+    .single();
+  
+  if (userError) {
+    console.error("[CHECK-SUBSCRIPTION-STATUS] Error fetching user data:", userError);
+    throw userError;
+  }
 
-    if (subscriptionError && subscriptionError.code !== 'PGRST116') {
-      logStep("Error fetching subscription", { error: subscriptionError });
-      throw new Error(`Error fetching subscription: ${subscriptionError.message}`);
-    }
+  // Check if subscription is active and not expired
+  const hasActiveSubscription = userData && 
+    userData.subscription_status === 'active' && 
+    userData.current_period_end && 
+    new Date(userData.current_period_end) > new Date();
 
-    const hasActiveSubscription = !!subscription;
-    const isExpired = subscription?.current_period_end 
-      ? new Date() > new Date(subscription.current_period_end)
-      : false;
+  const isExpired = userData?.current_period_end ? 
+    new Date() > new Date(userData.current_period_end) : false;
+
+  const subscriptionDetails = userData?.stripe_subscription_id ? {
+    status: userData.subscription_status,
+    plan_type: userData.current_plan_type,
+    current_period_end: userData.current_period_end,
+    cancel_at_period_end: userData.cancel_at_period_end
+  } : null;
 
     const isActiveAndNotExpired = hasActiveSubscription && !isExpired;
 
@@ -96,14 +106,14 @@ serve(async (req) => {
       hasSubscription: hasActiveSubscription,
       isExpired,
       isActiveAndNotExpired,
-      planType: subscription?.plan_type,
-      currentPeriodEnd: subscription?.current_period_end,
+      planType: userData?.current_plan_type,
+      currentPeriodEnd: userData?.current_period_end,
       userLookupMethod
     });
 
     return new Response(JSON.stringify({
       hasActiveSubscription: isActiveAndNotExpired,
-      subscription: subscription || null,
+      subscription: subscriptionDetails,
       isExpired,
       exists: true,
       hasSubscription: isActiveAndNotExpired,

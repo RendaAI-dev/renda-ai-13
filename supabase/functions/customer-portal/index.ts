@@ -73,28 +73,23 @@ serve(async (req) => {
     
     console.log("Stripe configuration loaded successfully");
 
-    // Query subscription with status check
-    const { data: subscription, error: subError } = await supabaseClient
-      .from("poupeja_subscriptions")
-      .select("stripe_customer_id, status, plan_type")
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .maybeSingle();
+  // Check if user has subscription data
+  const { data: userSubscriptionData, error: subscriptionError } = await supabaseClient
+    .from('poupeja_users')
+    .select('stripe_customer_id')
+    .eq('id', user.id)
+    .single();
 
-    if (subError) {
-      console.error("Subscription query error:", subError);
-      throw new Error(`Database error: ${subError.message}`);
-    }
+  if (subscriptionError) {
+    console.error(`[CUSTOMER-PORTAL] Error fetching user data:`, subscriptionError);
+    throw new Error(`Failed to fetch user data: ${subscriptionError.message}`);
+  }
 
-    if (!subscription?.stripe_customer_id) {
-      console.log("No active subscription found for user");
-      throw new Error("No active subscription found. Please subscribe to a plan to manage your subscription.");
-    }
+  if (!userSubscriptionData || !userSubscriptionData.stripe_customer_id) {
+    throw new Error("No Stripe customer found for this user");
+  }
 
-    console.log("Found active subscription:", { 
-      status: subscription.status,
-      planType: subscription.plan_type
-    });
+  const customerId = userSubscriptionData.stripe_customer_id;
 
     console.log("Initializing Stripe...");
     const stripe = new (await import("https://esm.sh/stripe@13.6.0")).Stripe(
@@ -110,7 +105,7 @@ serve(async (req) => {
     console.log("Using return URL:", `${origin}/plans`);
 
     const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
+      customer: customerId,
       return_url: `${origin}/plans`,
     });
 

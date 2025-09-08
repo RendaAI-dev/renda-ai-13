@@ -41,20 +41,28 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       if (error) {
         console.error('Error checking subscription via edge function:', error);
-        // Fallback: tentar busca direta na tabela
+        // Fallback: buscar dados diretamente da tabela poupeja_users
         const { data: fallbackData, error: fallbackError } = await supabase
-          .from('poupeja_subscriptions')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
+          .from('poupeja_users')
+          .select('subscription_status, current_plan_type, current_period_end, cancel_at_period_end')
+          .eq('id', user.id)
           .single();
 
-        if (fallbackError && fallbackError.code !== 'PGRST116') {
-          console.error('Error fetching subscription directly:', fallbackError);
+        if (fallbackError) {
+          console.error('Error fetching user subscription directly:', fallbackError);
           return;
         }
 
-        setSubscription(fallbackData);
+        // Mapear dados do usuário para o formato esperado
+        const mappedSubscription = fallbackData.subscription_status === 'active' ? {
+          id: user.id, // Usar user.id como fallback para id
+          status: fallbackData.subscription_status,
+          plan_type: fallbackData.current_plan_type,
+          current_period_end: fallbackData.current_period_end,
+          cancel_at_period_end: fallbackData.cancel_at_period_end
+        } : null;
+
+        setSubscription(mappedSubscription);
       } else {
         // Usar dados da edge function
         console.log('Subscription check result:', data);
